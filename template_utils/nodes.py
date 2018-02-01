@@ -11,10 +11,10 @@ from django import template
 class ContextUpdatingNode(template.Node):
     """
     Node that updates the context with certain values.
-    
+
     Subclasses should define ``get_content()``, which should return a
     dictionary to be added to the context.
-    
+
     """
     def render(self, context):
         context.update(self.get_content(context))
@@ -49,23 +49,26 @@ class GenericContentNode(ContextUpdatingNode):
        retrieve the object(s). The default ``QuerySet`` for the
        specified model (filtered as described above) will be available
        as ``self.query_set`` if you want to work with it.
-    
+
     """
     def __init__(self, model, num, varname):
         self.num = num
         self.varname = varname
         lookup_dict = getattr(settings, 'GENERIC_CONTENT_LOOKUP_KWARGS', {})
+        self.model = apps.get_model(*model.split('.'))
         if self.model is None:
-            raise template.TemplateSyntaxError("Generic content tag got invalid model: %s" % model)
-        self.query_set = self.model._default_manager.filter(**lookup_dict.get(model, {}))
-        
+            raise template.TemplateSyntaxError(
+                "Generic content tag got invalid model: %s" % model)
+        self.query_set = self.model._default_manager.filter(
+            **lookup_dict.get(model, {}))
+
     def _get_query_set(self):
         return self.query_set
-    
+
     def get_content(self, context):
         query_set = self._get_query_set()
         if self.num == 1:
             result = query_set[0]
         else:
             result = list(query_set[:self.num])
-        return { self.varname: result }
+        return {self.varname: result}
