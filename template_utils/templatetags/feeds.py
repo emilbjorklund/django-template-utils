@@ -23,16 +23,20 @@ class FeedIncludeNode(template.Node):
 
     def render(self, context):
         feed_url = self.feed_url.resolve(context)
-        feed = feedparser.parse(feed_url)
+        try:
+            feed = feedparser.parse(feed_url)
+        except Exception as e:
+            feed = None
         items = []
-        num_items = int(self.num_items) or len(feed['entries'])
-        for i in range(num_items):
-            pub_date = feed['entries'][i].updated_parsed
-            published = datetime.date(pub_date[0], pub_date[1], pub_date[2])
-            items.append({ 'title': feed['entries'][i].title,
-                           'summary': feed['entries'][i].summary,
-                           'link': feed['entries'][i].link,
-                           'date': published })
+        if feed:
+            num_items = int(self.num_items) or len(feed['entries'])
+            for i in range(num_items):
+                pub_date = feed['entries'][i].updated_parsed
+                published = datetime.date(pub_date[0], pub_date[1], pub_date[2])
+                items.append({ 'title': feed['entries'][i].title,
+                               'summary': feed['entries'][i].summary,
+                               'link': feed['entries'][i].link,
+                               'date': published })
         return render_to_string(self.template_name, { 'items': items,
                                                       'feed': feed })
 
@@ -44,7 +48,11 @@ class FeedParserNode(ContextUpdatingNode):
     
     def get_content(self, context):
         feed_url = self.feed_url.resolve(context)
-        return { self.varname: feedparser.parse(feed_url) }
+        try:
+            feed = feedparser.parse(feed_url)
+        except Exception as e:
+            feed = None
+        return { self.varname: feed }
 
 
 def do_include_feed(parser, token):
